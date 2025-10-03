@@ -1,5 +1,7 @@
 .vscode/
 
+# Ignorar solo los datos raw (imágenes grandes)
+data/raw/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
