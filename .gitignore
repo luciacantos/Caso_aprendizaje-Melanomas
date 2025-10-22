@@ -1,3 +1,48 @@
+# === IGNORAR DATASETS Y FOTOS ===
+data/
+datasets/
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.bmp
+
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+env/
+venv/
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# Datos y modelos
+data/
+datasets/
+models/
+weights/
+*.pth
+*.pt
+*.pkl
+*.onnx
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
+
+
 .vscode/
 
 # Ignorar solo los datos raw (imágenes grandes)
