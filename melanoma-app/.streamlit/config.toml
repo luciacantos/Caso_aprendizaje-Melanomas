@@ -1,0 +1,17 @@
+[theme]
+# Colores un poco más claros para que el logo respire
+primaryColor = "#00E0FF"
+backgroundColor = "#121821"         # <- más claro que #0a0a0c
+secondaryBackgroundColor = "#1b2433" # <- cards/side más claro
+textColor = "#EAF4FF"
+font = "sans serif"
+
+[client]
+showSidebarNavigation = true
+toolbarMode = "viewer"
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = true
+port = 8501

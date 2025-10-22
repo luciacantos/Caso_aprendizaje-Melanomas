@@ -1,0 +1,10 @@
+streamlit>=1.36
+numpy
+Pillow
+scikit-learn
+opencv-python-headless
+torch
+torchvision
+scipy
+pandas
+requests
