@@ -29,7 +29,6 @@ datasets/
 models/
 weights/
 *.pth
-*.pt
 *.pkl
 *.onnx
 
