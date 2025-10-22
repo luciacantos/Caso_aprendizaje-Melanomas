@@ -1,5 +1,6 @@
+# utils/utils_model.py
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 import torch.nn as nn
@@ -7,12 +8,12 @@ import torchvision.transforms as T
 from PIL import Image
 
 # --------- Rutas robustas ---------
-APP_DIR = Path(__file__).resolve().parent.parent      # .../melanoma-app
-MODELS_DIR = APP_DIR / "models"
+# Este archivo vive en: melanoma-app/utils/utils_model.py
+# APP_DIR apunta a la raíz de la app: melanoma-app/
+APP_DIR = Path(__file__).resolve().parent.parent
 
-# ⬇️ Pon aquí el nombre EXACTO del archivo .pt
-MODEL_FILENAME = "deepcnn6res_clean_best.pt"
-MODEL_PATH = MODELS_DIR / MODEL_FILENAME
+# El modelo (.pt) está directamente en la raíz de la app (SIN carpeta "models" ni "modelo")
+MODEL_PATH = APP_DIR / "deepcnn6res_clean_best.pt"
 
 # --------- Arquitectura ---------
 class ResidBlock(nn.Module):
@@ -23,8 +24,10 @@ class ResidBlock(nn.Module):
             nn.Conv2d(ch, ch, 3, padding=1), nn.BatchNorm2d(ch)
         )
         self.act = nn.ReLU(inplace=True)
+
     def forward(self, x):
         return self.act(self.conv(x) + x)
+
 
 class DeepCNN6Res(nn.Module):
     """
@@ -34,6 +37,7 @@ class DeepCNN6Res(nn.Module):
     def __init__(self, num_outputs: int = 1):
         super().__init__()
         self.num_outputs = num_outputs
+
         self.b1 = nn.Sequential(
             nn.Conv2d(3, 32, 7, stride=2, padding=3), nn.BatchNorm2d(32), nn.ReLU(inplace=True),
             nn.MaxPool2d(2)
@@ -61,8 +65,12 @@ class DeepCNN6Res(nn.Module):
             nn.Conv2d(256, 256, 3, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True)
         ); self.res6 = ResidBlock(256)
 
-        self.pool = nn.AdaptiveAvgPool2d((1,1))
-        self.head = nn.Sequential(nn.Flatten(), nn.Dropout(0.45), nn.Linear(256, self.num_outputs))
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.head = nn.Sequential(
+            nn.Flatten(),
+            nn.Dropout(0.45),
+            nn.Linear(256, self.num_outputs)
+        )
 
     def forward(self, x):
         x = self.b1(x)
@@ -78,6 +86,7 @@ class DeepCNN6Res(nn.Module):
 def get_device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def _infer_num_outputs_from_state(state: dict) -> int:
     """
     Detecta out_features de la capa final buscando el peso Linear de 'head'.
@@ -87,40 +96,41 @@ def _infer_num_outputs_from_state(state: dict) -> int:
     for k in candidates:
         w = state[k]
         if isinstance(w, torch.Tensor) and w.ndim == 2:
-            return int(w.shape[0])   # out_features
+            return int(w.shape[0])  # out_features
     return 1  # fallback
 
-def load_model(model_path: Path = MODEL_PATH) -> nn.Module:
+
+def load_model(model_path: Optional[Path] = None) -> nn.Module:
     """
-    - Detecta si el checkpoint es de 1 o 2 salidas.
-    - Si hay desajuste, elimina pesos de la cabeza y carga el resto (strict=False).
+    - Carga el checkpoint desde `model_path` si se pasa; si no, usa MODEL_PATH.
+    - Detecta automáticamente si el checkpoint es de 1 o 2 salidas.
+    - Si hay desajuste en la cabeza, carga el resto en modo strict=False.
     """
-    if not model_path.exists():
-        raise FileNotFoundError(f"No se encontró el modelo en: {model_path}\n(CWD: {Path.cwd()})")
+    mp = Path(model_path) if model_path is not None else MODEL_PATH
+    if not mp.exists():
+        raise FileNotFoundError(f"No se encontró el modelo en: {mp}\n(CWD: {Path.cwd()})")
 
     device = get_device()
-    state = torch.load(model_path, map_location=device)
+    state = torch.load(mp, map_location=device)
 
-    # Algunos checkpoints se guardan envueltos (p.ej. {'model': sd}). Intento destriparlo.
+    # A veces se guarda como {'state_dict': ...}
     if isinstance(state, dict) and "state_dict" in state and isinstance(state["state_dict"], dict):
         state = state["state_dict"]
 
     num_out = _infer_num_outputs_from_state(state)
     model = DeepCNN6Res(num_outputs=num_out).to(device)
 
-    # Intento 1: carga estricta (si coincide la cabeza no habrá error)
     try:
         model.load_state_dict(state, strict=True)
-    except RuntimeError as e:
-        # Intento 2: si el fallo es por la cabeza, la quitamos y cargamos el resto
-        keys_to_drop = [k for k in state.keys() if "head" in k]
+    except RuntimeError:
+        # Si falla por la cabeza, la omitimos y cargamos el resto
+        keys_to_drop = [k for k in list(state.keys()) if "head" in k]
         for k in keys_to_drop:
             state.pop(k, None)
-        missing, unexpected = model.load_state_dict(state, strict=False)
-        print(f"[WARN] Carga non-strict. missing={missing}, unexpected={unexpected}")
+        model.load_state_dict(state, strict=False)
 
     model.eval()
-    print(f"✅ Modelo PyTorch cargado ({num_out} salida(s)) en {device}: {model_path.name}")
+    print(f"✅ Modelo PyTorch cargado ({num_out} salida(s)) en {device}: {mp.name}")
     return model
 
 # --------- Preprocesado e inferencia ---------

@@ -1,15 +1,14 @@
-# Inicio.py
+# inicio.py
 import base64
 from pathlib import Path
 import streamlit as st
-from utils.utils_model import load_model, MODEL_PATH
+from utils.utils_model import load_model  # ⬅️ ya NO importamos MODEL_PATH
 
 st.set_page_config(page_title="Detector IA de Melanomas — Inicio", page_icon="🩺", layout="wide")
 
-# ===== Ajuste de ruta del modelo =====
-# El modelo ahora se guarda dentro de: melanoma-app/modelo/
+# ===== Ruta del modelo (sin carpeta) =====
 APP_DIR = Path(__file__).parent
-MODEL_PATH = APP_DIR / "modelo" / "deepcnn6res_clean_best.pt"
+MODEL_PATH = APP_DIR / "deepcnn6res_clean_best.pt"   # ⬅️ mismo sitio que ves en tu estructura
 
 # ===== Util =====
 def img_as_base64(path: Path) -> str | None:
@@ -64,7 +63,8 @@ st.sidebar.code(str(MODEL_PATH))
 
 @st.cache_resource
 def _load():
-    return load_model()
+    # ⬅️ pasamos la ruta explícita al loader
+    return load_model(MODEL_PATH)
 
 try:
     st.sidebar.info("Cargando modelo…")
