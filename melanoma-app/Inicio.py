@@ -6,6 +6,11 @@ from utils.utils_model import load_model, MODEL_PATH
 
 st.set_page_config(page_title="Detector IA de Melanomas — Inicio", page_icon="🩺", layout="wide")
 
+# ===== Ajuste de ruta del modelo =====
+# El modelo ahora se guarda dentro de: melanoma-app/modelo/
+APP_DIR = Path(__file__).parent
+MODEL_PATH = APP_DIR / "modelo" / "deepcnn6res_clean_best.pt"
+
 # ===== Util =====
 def img_as_base64(path: Path) -> str | None:
     try:
